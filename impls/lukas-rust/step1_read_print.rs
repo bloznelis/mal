@@ -19,8 +19,11 @@ fn main() {
                     // let tokenized = reader::read_str(&trimmed_line);
                     // let (form, _) = reader::read_form(&tokenized);
                     // println!("{:?}", form);
-                    let result: String = print(eval(read(&trimmed_line)));
-                    println!("{}", result);
+                    let read_result = read(&trimmed_line);
+                    match read_result {
+                        Ok(read_result) => println!("{}", print(eval(read_result))),
+                        Err(err_msg) => println!("{}", err_msg),
+                    }
                 }
             }
             Err(err) => {
@@ -31,9 +34,9 @@ fn main() {
     }
 }
 
-fn read(s: &str) -> MalType {
-    let reader = reader::read_str(s);
-    reader::read_form(&reader).0
+fn read(s: &str) -> Result<MalType, String> {
+    let rdr = reader::read_str(s);
+    reader::read_form(&rdr).map(|x| x.0)
 }
 
 fn eval(s: MalType) -> MalType {

@@ -34,19 +34,19 @@ pub fn read_str(str: &str) -> Reader {
     Reader { tokens, cursor: 0 }
 }
 
-pub fn read_form(reader: &Reader) -> (MalType, Reader) {
+pub fn read_form(reader: &Reader) -> Result<(MalType, Reader), String> {
     let (token, next_reader) = next(reader);
 
     match token {
         Some(token) => match token.as_str() {
-            "(" => read_list(&next_reader),
+            "(" => read_list(next_reader),
             _ => read_atom(reader),
         },
-        None => panic!("no next token"),
+        None => Err("no next token".to_string()),
     }
 }
 
-fn read_list(initial_reader: &Reader) -> (MalType, Reader) {
+fn read_list(initial_reader: Reader) -> Result<(MalType, Reader), String> {
     let mut acc: Vec<MalType> = Vec::new();
     let mut loop_reader: Reader = initial_reader.clone();
 
@@ -55,23 +55,25 @@ fn read_list(initial_reader: &Reader) -> (MalType, Reader) {
 
         match token {
             Some(token) => match token.as_str() {
-                ")" => break (MalType::MalList(acc), next_reader),
-                _ => {
-                    let (form, reader_after_form_read) = read_form(&loop_reader);
-                    acc.push(form);
-                    loop_reader = reader_after_form_read;
-                }
+                ")" => break Ok((MalType::MalList(acc), next_reader)),
+                _ => match read_form(&loop_reader) {
+                    Ok((form, reader_after_form_read)) => {
+                        acc.push(form);
+                        loop_reader = reader_after_form_read;
+                    }
+                    Err(_) => todo!(),
+                },
             },
-            None => panic!("No more tokens to loop trough."),
+            None => break Err(".*\n.*(EOF|end of input|unbalanced).*".to_string()),
         }
     }
 }
 
-fn read_atom(reader: &Reader) -> (MalType, Reader) {
+fn read_atom(reader: &Reader) -> Result<(MalType, Reader), String> {
     let (token, next_reader) = next(reader);
 
     match token {
-        Some(token) => (MalType::MalAtom(token), next_reader),
-        None => panic!("no atom?"),
+        Some(token) => Ok((MalType::MalAtom(token), next_reader)),
+        None => Err("no atom?".to_string()),
     }
 }
